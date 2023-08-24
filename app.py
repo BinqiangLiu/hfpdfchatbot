@@ -1,5 +1,3 @@
-#在app.py的基础上删除不必要的代码
-#完全免费的开源自由文档问答App：开源Embedding、开源QA LLM
 import streamlit as st
 from langchain.chains.question_answering import load_qa_chain
 from langchain import PromptTemplate, LLMChain
@@ -15,6 +13,10 @@ HUGGINGFACEHUB_API_TOKEN = os.getenv('HUGGINGFACEHUB_API_TOKEN')
 model_id = os.getenv('model_id')
 hf_token = os.getenv('hf_token')
 repo_id = os.getenv('repo_id')
+HUGGINGFACEHUB_API_TOKEN = os.environ.get('HUGGINGFACEHUB_API_TOKEN')
+model_id = os.environ.get('model_id')
+hf_token = os.environ.get('hf_token')
+repo_id = os.environ.get('repo_id')
 
 st.subheader("Your PDF file Chat Assistant")
 
@@ -24,9 +26,8 @@ with st.sidebar:
     st.subheader("Upload your PDF file here: ")
     try:
         uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)
-        file_name = uploaded_file.name
         with st.spinner("Processing your PDF file..."):
-            doc_reader = PdfReader(file_name)
+            doc_reader = PdfReader(uploaded_file)
             raw_text = ''
             for i, page in enumerate(doc_reader.pages):
                 text = page.extract_text()
