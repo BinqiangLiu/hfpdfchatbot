@@ -29,7 +29,7 @@ with open(css_file) as f:
 texts=""
 
 with st.sidebar:
-    st.subheader("Upload your PDF file here: ")
+    st.subheader("Enjoy Chatting with your PDF file!")    
     try:
         uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)
         with st.spinner("Processing your PDF file..."):
