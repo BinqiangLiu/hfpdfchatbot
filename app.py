@@ -18,9 +18,8 @@ model_id = os.environ.get('model_id')
 hf_token = os.environ.get('hf_token')
 repo_id = os.environ.get('repo_id')
 
-st.set_page_config(page_title="Your PDF AI Chat Assistant")
-st.subheader("Your PDF file Chat Assistant")
-st.write('---')
+st.set_page_config(page_title="PDF AI Chat Assistant")
+st.subheader("Your PDF file AI Chat Assistant")
 
 css_file = "main.css"
 with open(css_file) as f:
