@@ -67,7 +67,7 @@ db_embeddings = torch.FloatTensor(initial_embeddings)
 question = st.text_input("Enter your question & query your PDF file:")
 
 if question !="":         
-    st.write("Your question: "+question)
+    #st.write("Your question: "+question)
     print("Your question: "+question)
     print()
 else:
