@@ -8,6 +8,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import TextLoader
 import torch
 import requests
+from pathlib import Path
+import random
+import string
+import sys
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -31,6 +35,10 @@ with open(css_file) as f:
 def get_embeddings(input_str_texts):
     response = requests.post(api_url, headers=headers, json={"inputs": input_str_texts, "options":{"wait_for_model":True}})
     return response.json()
+
+def generate_random_string(length):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))  
 
 print(f"定义处理多余的Context文本的函数")
 def remove_context(text):
@@ -103,40 +111,42 @@ if "user_question" not in st.session_state:
     st.session_state.user_question = st.text_input("Enter your question & query your PDF file:")
     
 if st.session_state.user_question !="" and not st.session_state.user_question.strip().isspace() and not st.session_state.user_question == "" and not st.session_state.user_question.strip() == "" and not st.session_state.user_question.isspace():
-with st.spinner("AI Working...Please wait a while to Cheers!"):
-    q_embedding=get_embeddings(st.session_state.user_question)
-    final_q_embedding = torch.FloatTensor(q_embedding)
-    from sentence_transformers.util import semantic_search
-    hits = semantic_search(final_q_embedding, db_embeddings, top_k=5)
-    for i in range(len(hits[0])):
-        print(texts[hits[0][i]['corpus_id']])
+    with st.spinner("AI Working...Please wait a while to Cheers!"):
+        q_embedding=get_embeddings(st.session_state.user_question)
+        final_q_embedding = torch.FloatTensor(q_embedding)
+        from sentence_transformers.util import semantic_search
+        hits = semantic_search(final_q_embedding, db_embeddings, top_k=5)
+        for i in range(len(hits[0])):
+            print(texts[hits[0][i]['corpus_id']])
+            print()
+        page_contents = []
+        for i in range(len(hits[0])):
+            page_content = texts[hits[0][i]['corpus_id']]
+            page_contents.append(page_content)
+        print(page_contents)
         print()
-    page_contents = []
-    for i in range(len(hits[0])):
-        page_content = texts[hits[0][i]['corpus_id']]
-        page_contents.append(page_content)
-    print(page_contents)
-    print()
-    temp_page_contents=str(page_contents)
-    print()
-    final_page_contents = temp_page_contents.replace('\\n', '') 
-    print(final_page_contents)
-    file_path = "tempfile.txt"
-    with open(file_path, "w", encoding="utf-8") as file:
-        file.write(final_page_contents)
-    loader = TextLoader("tempfile.txt", encoding="utf-8")
-    loaded_documents = loader.load()
-    #temp_ai_response=chain.run(input_documents=loaded_documents, question=st.session_state.user_question)
-    temp_ai_response = chain({"input_documents": loaded_documents, "question": st.session_state.user_question}, return_only_outputs=False)
-    initial_ai_response=temp_ai_response['output_text']
-    cleaned_initial_ai_response = remove_context(initial_ai_response)
-    print("AI Response after text cleaning: "+cleaned_initial_ai_response)
-    print() 
-    final_ai_response = cleaned_initial_ai_response.partition('<|end|>')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
-#    final_ai_response=temp_ai_response.partition('<|end|>')[0]
-    #i_final_ai_response = final_ai_response.replace('\n', '')
-    print("AI Response:")
-    print(final_ai_response)
-    print("Have more questions? Go ahead and continue asking your AI assistant : )")
-    st.write("AI Response:")
-    st.write(final_ai_response)
+        temp_page_contents=str(page_contents)
+        print()
+        final_page_contents = temp_page_contents.replace('\\n', '') 
+        print(final_page_contents)
+        file_path = random_string + ".txt"
+        #file_path = "tempfile.txt"
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(final_page_contents)
+        #loader = TextLoader("tempfile.txt", encoding="utf-8")
+        loader = TextLoader(file_path, encoding="utf-8")
+        loaded_documents = loader.load()
+        #temp_ai_response=chain.run(input_documents=loaded_documents, question=st.session_state.user_question)
+        temp_ai_response = chain({"input_documents": loaded_documents, "question": st.session_state.user_question}, return_only_outputs=False)
+        initial_ai_response=temp_ai_response['output_text']
+        cleaned_initial_ai_response = remove_context(initial_ai_response)
+        print("AI Response after text cleaning: "+cleaned_initial_ai_response)
+        print() 
+        final_ai_response = cleaned_initial_ai_response.partition('<|end|>')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
+    #    final_ai_response=temp_ai_response.partition('<|end|>')[0]
+        #i_final_ai_response = final_ai_response.replace('\n', '')
+        print("AI Response:")
+        print(final_ai_response)
+        print("Have more questions? Go ahead and continue asking your AI assistant : )")
+        st.write("AI Response:")
+        st.write(final_ai_response)
