@@ -6,17 +6,19 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.document_loaders import TextLoader
 import torch
+import requests
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
 HUGGINGFACEHUB_API_TOKEN = os.getenv('HUGGINGFACEHUB_API_TOKEN')
 model_id = os.getenv('model_id')
 hf_token = os.getenv('hf_token')
 repo_id = os.getenv('repo_id')
-HUGGINGFACEHUB_API_TOKEN = os.environ.get('HUGGINGFACEHUB_API_TOKEN')
-model_id = os.environ.get('model_id')
-hf_token = os.environ.get('hf_token')
-repo_id = os.environ.get('repo_id')
+#HUGGINGFACEHUB_API_TOKEN = os.environ.get('HUGGINGFACEHUB_API_TOKEN')
+#model_id = os.environ.get('model_id')
+#hf_token = os.environ.get('hf_token')
+#repo_id = os.environ.get('repo_id')
 
 st.set_page_config(page_title="PDF AI Chat Assistant")
 st.subheader("Your PDF file AI Chat Assistant")
@@ -24,81 +26,13 @@ st.subheader("Your PDF file AI Chat Assistant")
 css_file = "main.css"
 with open(css_file) as f:
     st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
-    
-texts=""
-
-with st.sidebar:
-    st.subheader("Enjoy Chatting with your PDF file!")    
-    try:
-        uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)
-        with st.spinner("Processing your PDF file..."):
-            doc_reader = PdfReader(uploaded_file)
-            raw_text = ''
-            for i, page in enumerate(doc_reader.pages):
-                text = page.extract_text()
-                if text:
-                    raw_text += text
-            text_splitter = CharacterTextSplitter(        
-                separator = "\n",
-                chunk_size = 1000,
-                chunk_overlap  = 200, #striding over the text
-                length_function = len,
-            )
-            temp_texts = text_splitter.split_text(raw_text)
-            texts = temp_texts
-            st.write("File processed. Now you can proceed to query your PDF file!")
-    except Exception as e:
-        st.write("Please upload your PDF file first.")
-        print("Please upload your PDF file first.")
-        st.stop()
-
-import requests
-api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model_id}"
-headers = {"Authorization": f"Bearer {hf_token}"}
 
 def get_embeddings(input_str_texts):
     response = requests.post(api_url, headers=headers, json={"inputs": input_str_texts, "options":{"wait_for_model":True}})
     return response.json()
 
-initial_embeddings=get_embeddings(texts)
-
-db_embeddings = torch.FloatTensor(initial_embeddings) 
-
-question = st.text_input("Enter your question & query your PDF file:")
-
-if question !="":         
-    #st.write("Your question: "+question)
-    print("Your question: "+question)
-    print()
-else:
-#    st.write("Please enter your question first.")
-    print("Please enter your question first.")
-    st.stop()
-
-q_embedding=get_embeddings(question)
-final_q_embedding = torch.FloatTensor(q_embedding)
-
-from sentence_transformers.util import semantic_search
-hits = semantic_search(final_q_embedding, db_embeddings, top_k=5)
-
-for i in range(len(hits[0])):
-    print(texts[hits[0][i]['corpus_id']])
-    print()
-
-page_contents = []
-for i in range(len(hits[0])):
-    page_content = texts[hits[0][i]['corpus_id']]
-    page_contents.append(page_content)
-
-print(page_contents)
-print()
-temp_page_contents=str(page_contents)
-print()
-final_page_contents = temp_page_contents.replace('\\n', '') 
-print(final_page_contents)
-print()
-print("AI Working...Please wait a while...Cheers!")
-print()
+api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model_id}"
+headers = {"Authorization": f"Bearer {hf_token}"}
 
 llm = HuggingFaceHub(repo_id=repo_id,
                      model_kwargs={"min_length":100,
@@ -107,28 +41,82 @@ llm = HuggingFaceHub(repo_id=repo_id,
                                    "top_k":50,
                                    "top_p":0.95, "eos_token_id":49155})
 
-chain = load_qa_chain(llm=llm, chain_type="stuff")
+prompt_template = """
+You are a very helpful AI assistant who is expert in intellectual property industry. Please ONLY use {context} to answer the user's question. If you don't know the answer, just say that you don't know. DON'T try to make up an answer.
+Your response should be full and detailed.
+Question: {question}
+Helpful AI Repsonse:
+"""
+PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
+chain = load_qa_chain(llm=llm, chain_type="stuff", prompt=PROMPT)
+
+if "texts" not in st.session_state:
+    st.session_state.texts = ""
+
+if "db_embeddings" not in st.session_state:
+    st.session_state.db_embeddings = ""
+
+with st.sidebar:
+    st.subheader("Enjoy Chatting with your PDF file!")    
+    try:
+        uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)        
+        if st.button('Process to AI Chat'):
+            with st.spinner("Processing your PDF file..."):
+                doc_reader = PdfReader(uploaded_file)
+                raw_text = ''
+                for i, page in enumerate(doc_reader.pages):
+                    text = page.extract_text()
+                    if text:
+                        raw_text += text
+                text_splitter = CharacterTextSplitter(        
+                    separator = "\n",
+                    chunk_size = 1000,
+                    chunk_overlap  = 200, #striding over the text
+                    length_function = len,
+                )
+                temp_texts = text_splitter.split_text(raw_text)
+                texts = temp_texts
+                initial_embeddings=get_embeddings(texts)
+                st.session_state.db_embeddings = torch.FloatTensor(initial_embeddings) 
+                st.write("File processed. Now you can proceed to query your PDF file!")
+    except Exception as e:
+        st.write("Please upload your PDF file first.")
+        print("Please upload your PDF file first.")
+        st.stop()
+
+if "user_question" not in st.session_state:
+    st.session_state.user_question = st.text_input("Enter your question & query your PDF file:")
+    
+if st.session_state.user_question !="" and not st.session_state.user_question.strip().isspace() and not st.session_state.user_question == "" and not st.session_state.user_question.strip() == "" and not st.session_state.user_question.isspace():
 with st.spinner("AI Working...Please wait a while to Cheers!"):
+    q_embedding=get_embeddings(st.session_state.user_question)
+    final_q_embedding = torch.FloatTensor(q_embedding)
+    from sentence_transformers.util import semantic_search
+    hits = semantic_search(final_q_embedding, db_embeddings, top_k=5)
+    for i in range(len(hits[0])):
+        print(texts[hits[0][i]['corpus_id']])
+        print()
+    page_contents = []
+    for i in range(len(hits[0])):
+        page_content = texts[hits[0][i]['corpus_id']]
+        page_contents.append(page_content)
+    print(page_contents)
+    print()
+    temp_page_contents=str(page_contents)
+    print()
+    final_page_contents = temp_page_contents.replace('\\n', '') 
+    print(final_page_contents)
     file_path = "tempfile.txt"
     with open(file_path, "w", encoding="utf-8") as file:
         file.write(final_page_contents)
-
     loader = TextLoader("tempfile.txt", encoding="utf-8")
     loaded_documents = loader.load()
-
-    temp_ai_response=chain.run(input_documents=loaded_documents, question=question)
+    temp_ai_response=chain.run(input_documents=loaded_documents, question=st.session_state.user_question)
     final_ai_response=temp_ai_response.partition('<|end|>')[0]
     i_final_ai_response = final_ai_response.replace('\n', '')
     print("AI Response:")
     print(i_final_ai_response)
     print("Have more questions? Go ahead and continue asking your AI assistant : )")
-
     st.write("AI Response:")
     st.write(i_final_ai_response)
-#    st.write("---")
-#    st.write("Have more questions? Go ahead and continue asking your AI assistant : )")
-
-
-
-
