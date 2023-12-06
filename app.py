@@ -79,37 +79,31 @@ if "texts" not in st.session_state:
 if "db_embeddings" not in st.session_state:
     st.session_state.db_embeddings = ""
 
-with st.sidebar:
-    st.subheader("Enjoy Chatting with your PDF file!")    
-    try:
-        uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)        
-        if st.button('Process to AI Chat'):
-            with st.spinner("Processing your PDF file..."):
-                doc_reader = PdfReader(uploaded_file)
-                raw_text = ''
-                for i, page in enumerate(doc_reader.pages):
-                    text = page.extract_text()
-                    if text:
-                        raw_text += text
-                text_splitter = RecursiveCharacterTextSplitter(        
-                    #separator = "\n",
-                    chunk_size = 500,
-                    chunk_overlap  = 100, #striding over the text
-                    length_function = len,
-                )
-                temp_texts = text_splitter.split_text(raw_text)
-                texts = temp_texts
-                initial_embeddings=get_embeddings(texts)
-                st.session_state.db_embeddings = torch.FloatTensor(initial_embeddings) 
-                st.write("File processed. Now you can proceed to query your PDF file!")
-    except Exception as e:
-        st.write("Please upload your PDF file first.")
-        print("Please upload your PDF file first.")
-        st.stop()
+text_splitter = RecursiveCharacterTextSplitter(        
+    #separator = "\n",
+    chunk_size = 500,
+    chunk_overlap  = 100, #striding over the text
+    length_function = len,
+)
 
-if "user_question" not in st.session_state:
-    st.session_state.user_question = st.text_input("Enter your question & query your PDF file:")
-    
+with st.sidebar:
+    st.subheader("Enjoy Chatting with your PDF file!") 
+    uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)
+    if st.button('Process to AI Chat'):
+        with st.spinner("Processing your PDF file..."):
+            doc_reader = PdfReader(uploaded_file)
+            raw_text = ''
+            for i, page in enumerate(doc_reader.pages):
+                text = page.extract_text()
+                if text:
+                    raw_text += text
+            temp_texts = text_splitter.split_text(raw_text)
+            texts = temp_texts
+            initial_embeddings=get_embeddings(texts)
+            st.session_state.db_embeddings = torch.FloatTensor(initial_embeddings) 
+            st.write("File processed. Now you can proceed to query your PDF file!")
+            
+st.session_state.user_question = st.text_input("Enter your question & query your PDF file:")    
 if st.session_state.user_question !="" and not st.session_state.user_question.strip().isspace() and not st.session_state.user_question == "" and not st.session_state.user_question.strip() == "" and not st.session_state.user_question.isspace():
     with st.spinner("AI Working...Please wait a while to Cheers!"):
         q_embedding=get_embeddings(st.session_state.user_question)
