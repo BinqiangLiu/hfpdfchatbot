@@ -109,7 +109,7 @@ if st.session_state.user_question !="" and not st.session_state.user_question.st
         q_embedding=get_embeddings(st.session_state.user_question)
         final_q_embedding = torch.FloatTensor(q_embedding)
         from sentence_transformers.util import semantic_search
-        hits = semantic_search(final_q_embedding, db_embeddings, top_k=5)
+        hits = semantic_search(final_q_embedding, st.session_state.db_embeddings, top_k=5)
         for i in range(len(hits[0])):
             print(texts[hits[0][i]['corpus_id']])
             print()
