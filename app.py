@@ -4,6 +4,7 @@ from langchain import PromptTemplate, LLMChain
 from langchain import HuggingFaceHub
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import TextLoader
 import torch
 import requests
@@ -30,6 +31,19 @@ with open(css_file) as f:
 def get_embeddings(input_str_texts):
     response = requests.post(api_url, headers=headers, json={"inputs": input_str_texts, "options":{"wait_for_model":True}})
     return response.json()
+
+print(f"定义处理多余的Context文本的函数")
+def remove_context(text):
+    # 检查 'Context:' 是否存在
+    if 'Context:' in text:
+        # 找到第一个 '\n\n' 的位置
+        end_of_context = text.find('\n\n')
+        # 删除 'Context:' 到第一个 '\n\n' 之间的部分
+        return text[end_of_context + 2:]  # '+2' 是为了跳过两个换行符
+    else:
+        # 如果 'Context:' 不存在，返回原始文本
+        return text
+print(f"处理多余的Context文本函数定义结束")    
 
 api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model_id}"
 headers = {"Authorization": f"Bearer {hf_token}"}
@@ -69,10 +83,10 @@ with st.sidebar:
                     text = page.extract_text()
                     if text:
                         raw_text += text
-                text_splitter = CharacterTextSplitter(        
-                    separator = "\n",
-                    chunk_size = 1000,
-                    chunk_overlap  = 200, #striding over the text
+                text_splitter = RecursiveCharacterTextSplitter(        
+                    #separator = "\n",
+                    chunk_size = 500,
+                    chunk_overlap  = 100, #striding over the text
                     length_function = len,
                 )
                 temp_texts = text_splitter.split_text(raw_text)
@@ -112,11 +126,17 @@ with st.spinner("AI Working...Please wait a while to Cheers!"):
         file.write(final_page_contents)
     loader = TextLoader("tempfile.txt", encoding="utf-8")
     loaded_documents = loader.load()
-    temp_ai_response=chain.run(input_documents=loaded_documents, question=st.session_state.user_question)
-    final_ai_response=temp_ai_response.partition('<|end|>')[0]
-    i_final_ai_response = final_ai_response.replace('\n', '')
+    #temp_ai_response=chain.run(input_documents=loaded_documents, question=st.session_state.user_question)
+    temp_ai_response = chain({"input_documents": loaded_documents, "question": st.session_state.user_question}, return_only_outputs=False)
+    initial_ai_response=temp_ai_response['output_text']
+    cleaned_initial_ai_response = remove_context(initial_ai_response)
+    print("AI Response after text cleaning: "+cleaned_initial_ai_response)
+    print() 
+    final_ai_response = cleaned_initial_ai_response.partition('<|end|>')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
+#    final_ai_response=temp_ai_response.partition('<|end|>')[0]
+    #i_final_ai_response = final_ai_response.replace('\n', '')
     print("AI Response:")
-    print(i_final_ai_response)
+    print(final_ai_response)
     print("Have more questions? Go ahead and continue asking your AI assistant : )")
     st.write("AI Response:")
-    st.write(i_final_ai_response)
+    st.write(final_ai_response)
