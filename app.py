@@ -88,7 +88,8 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 with st.sidebar:
     st.subheader("Enjoy Chatting with your PDF file!") 
-    uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)
+    uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)  #Oked
+    #uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=True)
     if st.button('Process to AI Chat'):
         with st.spinner("Processing your PDF file..."):
             doc_reader = PdfReader(uploaded_file)
@@ -111,7 +112,7 @@ if st.session_state.user_question !="" and not st.session_state.user_question.st
         from sentence_transformers.util import semantic_search
         hits = semantic_search(final_q_embedding, st.session_state.db_embeddings, top_k=5)
         for i in range(len(hits[0])):
-            print(texts[hits[0][i]['corpus_id']])
+            print(st.session_state.texts[hits[0][i]['corpus_id']])
             print()
         page_contents = []
         for i in range(len(hits[0])):
