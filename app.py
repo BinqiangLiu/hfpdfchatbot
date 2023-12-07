@@ -124,6 +124,7 @@ if st.session_state.user_question !="" and not st.session_state.user_question.st
         print()
         final_page_contents = temp_page_contents.replace('\\n', '') 
         print(final_page_contents)
+        random_string=generate_random_string(20)
         file_path = random_string + ".txt"
         #file_path = "tempfile.txt"
         with open(file_path, "w", encoding="utf-8") as file:
