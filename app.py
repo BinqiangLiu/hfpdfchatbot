@@ -98,8 +98,8 @@ with st.sidebar:
                 if text:
                     raw_text += text
             temp_texts = text_splitter.split_text(raw_text)
-            texts = temp_texts
-            initial_embeddings=get_embeddings(texts)
+            st.session_state.texts = temp_texts
+            initial_embeddings=get_embeddings(st.session_state.texts)
             st.session_state.db_embeddings = torch.FloatTensor(initial_embeddings) 
             st.write("File processed. Now you can proceed to query your PDF file!")
             
@@ -115,7 +115,7 @@ if st.session_state.user_question !="" and not st.session_state.user_question.st
             print()
         page_contents = []
         for i in range(len(hits[0])):
-            page_content = texts[hits[0][i]['corpus_id']]
+            page_content = st.session_state.texts[hits[0][i]['corpus_id']]
             page_contents.append(page_content)
         print(page_contents)
         print()
