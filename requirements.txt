@@ -1,10 +1,10 @@
-huggingface_hub
+streamlit
 langchain
+huggingface_hub
 pandas
-PyPDF2
 python-dotenv
 Requests
 sentence_transformers
-streamlit
-streamlit_chat
 torch
+PyPDF2[full]
+#pycryptodome
