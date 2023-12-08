@@ -12,9 +12,27 @@ from pathlib import Path
 import random
 import string
 import sys
+import timeit
+import datetime
+import io
+from pathlib import Path
+
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
+st.set_page_config(page_title="PDF AI Chat Assistant - Open Source Version", layout="wide")
+st.subheader("Welcome to PDF AI Chat Assistant - Life Enhancing with AI.")
+st.write("Important notice: This Open PDF AI Chat Assistant is offered for information and study purpose only and by no means for any other use. Any user should never interact with the AI Assistant in any way that is against any related promulgated regulations. The user is the only entity responsible for interactions taken between the user and the AI Chat Assistant.")
+
+css_file = "main.css"
+with open(css_file) as f:
+    st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)   
+
+current_datetime_0= datetime.datetime.now()
+print(f"Anything happens, this ST app will execute from top down. 程序初始化开始@ {current_datetime_0}")
+print()   
+start_1 = timeit.default_timer() # Start timer   
 
 HUGGINGFACEHUB_API_TOKEN = os.getenv('HUGGINGFACEHUB_API_TOKEN')
 model_id = os.getenv('model_id')
@@ -24,13 +42,6 @@ repo_id = os.getenv('repo_id')
 #model_id = os.environ.get('model_id')
 #hf_token = os.environ.get('hf_token')
 #repo_id = os.environ.get('repo_id')
-
-st.set_page_config(page_title="PDF AI Chat Assistant")
-st.subheader("Your PDF file AI Chat Assistant")
-
-css_file = "main.css"
-with open(css_file) as f:
-    st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
 
 def get_embeddings(input_str_texts):
     response = requests.post(api_url, headers=headers, json={"inputs": input_str_texts, "options":{"wait_for_model":True}})
@@ -79,6 +90,9 @@ if "texts" not in st.session_state:
 if "db_embeddings" not in st.session_state:
     st.session_state.db_embeddings = ""
 
+if "tf_switch" not in st.session_state:
+    st.session_state.tf_switch = True                     
+
 text_splitter = RecursiveCharacterTextSplitter(        
     #separator = "\n",
     chunk_size = 500,
@@ -86,13 +100,27 @@ text_splitter = RecursiveCharacterTextSplitter(
     length_function = len,
 )
 
+end_1 = timeit.default_timer()
+print(f"Anything happens, this ST app will execute from top down. 程序初始化结束@ {current_datetime_0}")
+print(f'程序初始化耗时： {end_1 - start_1}')  
+print()   
+
 with st.sidebar:
     st.subheader("Enjoy Chatting with your PDF file!") 
-    uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)  #Oked
-    #uploaded_file = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=True)
+    uploaded_files = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=False)  #Oked
+    #uploaded_files = st.file_uploader("Upload your PDF file and press OK", type=['pdf'], accept_multiple_files=True)
+    start_2 = timeit.default_timer() # Start timer   
+    print(f"pdf文件上传并等待处理开始")      
+
+    #if uploaded_files:
+     #   for pdf_file in uploaded_files:
+      #      with open(pdf_file.name, 'wb') as f:   #AttributeError: 'bytes' object has no attribute 'name'
+       #         f.write(pdf_file.read())
+        #st.success(f"File '{pdf_file.name}' saved successfully.")           
+
     if st.button('Process to AI Chat'):
         with st.spinner("Processing your PDF file..."):
-            doc_reader = PdfReader(uploaded_file)
+            doc_reader = PdfReader(uploaded_files)
             raw_text = ''
             for i, page in enumerate(doc_reader.pages):
                 text = page.extract_text()
@@ -103,8 +131,11 @@ with st.sidebar:
             initial_embeddings=get_embeddings(st.session_state.texts)
             st.session_state.db_embeddings = torch.FloatTensor(initial_embeddings) 
             st.write("File processed. Now you can proceed to query your PDF file!")
-            
-st.session_state.user_question = st.text_input("Enter your question & query your PDF file:")    
+        end_2 = timeit.default_timer() # Start timer      
+        print(f'pdf文件上传并处理结束，共耗时： {end_2 - start_2}') 
+        st.session_state.tf_switch=False
+
+st.session_state.user_question = st.text_input("Enter your question & query your PDF file:", disabled=st.session_state.tf_switch)    
 if st.session_state.user_question !="" and not st.session_state.user_question.strip().isspace() and not st.session_state.user_question == "" and not st.session_state.user_question.strip() == "" and not st.session_state.user_question.isspace():
     with st.spinner("AI Working...Please wait a while to Cheers!"):
         q_embedding=get_embeddings(st.session_state.user_question)
@@ -112,37 +143,63 @@ if st.session_state.user_question !="" and not st.session_state.user_question.st
         from sentence_transformers.util import semantic_search
         hits = semantic_search(final_q_embedding, st.session_state.db_embeddings, top_k=5)
         for i in range(len(hits[0])):
-            print(st.session_state.texts[hits[0][i]['corpus_id']])
+            print(st.session_state.texts[hits[0][i]['corpus_id']])            
             print()
+        print("语义检索结果的内容，被单独打印输出")
+        print()
+        
         page_contents = []
         for i in range(len(hits[0])):
             page_content = st.session_state.texts[hits[0][i]['corpus_id']]
             page_contents.append(page_content)
         print(page_contents)
-        print()
-        temp_page_contents=str(page_contents)
-        print()
+        print("语义检索结果的内容被整合后打印输出")
+        print()            
+        
+        temp_page_contents=str(page_contents)        
         final_page_contents = temp_page_contents.replace('\\n', '') 
         print(final_page_contents)
+        print("语义检索结果的内容被整合后，处理为str格式并去除多余空行后打印输出")
+        print()
+        
         random_string=generate_random_string(20)
         file_path = random_string + ".txt"
         #file_path = "tempfile.txt"
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(final_page_contents)
+            
+        print("语义检索结果处理后内容被保存为临时文件："+file_path)
+        print()
         #loader = TextLoader("tempfile.txt", encoding="utf-8")
         loader = TextLoader(file_path, encoding="utf-8")
         loaded_documents = loader.load()
+
+        start_3 = timeit.default_timer() # Start timer   
+        print(f"load_qa_chain开始") 
         #temp_ai_response=chain.run(input_documents=loaded_documents, question=st.session_state.user_question)
         temp_ai_response = chain({"input_documents": loaded_documents, "question": st.session_state.user_question}, return_only_outputs=False)
+        end_3 = timeit.default_timer() 
+        print(f'pload_qa_chain结束，共耗时： {end_3 - start_3}')  
+        
+        print(f"load_qa_chain原始回复内容：temp_ai_response") 
+        print(temp_ai_response)
+        
         initial_ai_response=temp_ai_response['output_text']
+        print(f"load_qa_chain原始回复内容temp_ai_response之['output_text']") 
+        print(initial_ai_response)
+        
         cleaned_initial_ai_response = remove_context(initial_ai_response)
-        print("AI Response after text cleaning: "+cleaned_initial_ai_response)
+        print("调用remove_context函数对['output_text']进行处理之后的输出结果: ")
+        print(cleaned_initial_ai_response)
         print() 
+        
         final_ai_response = cleaned_initial_ai_response.partition('<|end|>')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
-    #    final_ai_response=temp_ai_response.partition('<|end|>')[0]
-        #i_final_ai_response = final_ai_response.replace('\n', '')
-        print("AI Response:")
-        print(final_ai_response)
-        print("Have more questions? Go ahead and continue asking your AI assistant : )")
+        new_final_ai_response = final_ai_response.split('Unhelpful Answer:')[0].strip()
+        new_final_ai_response = new_final_ai_response.split('Note:')[0].strip()
+        new_final_ai_response = new_final_ai_response.split('Please provide feedback on how to improve the chatbot.')[0].strip()                 
+
+        print("Final AI Response:")
+        print(new_final_ai_response)
+        
         st.write("AI Response:")
-        st.write(final_ai_response)
+        st.write(new_final_ai_response)
