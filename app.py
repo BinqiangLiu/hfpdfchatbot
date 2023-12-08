@@ -68,17 +68,17 @@ api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{mo
 headers = {"Authorization": f"Bearer {hf_token}"}
 
 llm = HuggingFaceHub(repo_id=repo_id,
-                     model_kwargs={"min_length":100,
+                     model_kwargs={"min_length":512,
                                    "max_new_tokens":1024, "do_sample":True,
                                    "temperature":0.1,
                                    "top_k":50,
                                    "top_p":0.95, "eos_token_id":49155})
 
 prompt_template = """
-You are a very helpful AI assistant who is expert in intellectual property industry. Please ONLY use {context} to answer the user's question. If you don't know the answer, just say that you don't know. DON'T try to make up an answer.
-Your response should be full and detailed.
-Question: {question}
-Helpful AI Repsonse:
+You are a very helpful AI assistant. Please ONLY use {context} to answer the user's question {question}. If you don't know the answer, just say that you don't know. DON'T try to make up an answer.
+Your response should be full and easy to understand.
+#Question: {question}
+#Helpful AI Repsonse:
 """
 PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
