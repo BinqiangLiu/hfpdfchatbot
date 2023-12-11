@@ -193,7 +193,8 @@ if st.session_state.user_question !="" and not st.session_state.user_question.st
         print(cleaned_initial_ai_response)
         print() 
         
-        final_ai_response = cleaned_initial_ai_response.partition('¿cuál es')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
+        final_ai_response = cleaned_initial_ai_response.partition('¿Cuál es')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
+        #MUST BE '¿Cuál es'
         final_ai_response = final_ai_response.partition('<|end|>')[0].strip().replace('\n\n', '\n').replace('<|end|>', '').replace('<|user|>', '').replace('<|system|>', '').replace('<|assistant|>', '')
         new_final_ai_response = final_ai_response.split('Unhelpful Answer:')[0].strip()
         new_final_ai_response = new_final_ai_response.split('Note:')[0].strip()
